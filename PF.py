@@ -12,6 +12,7 @@ with open("GSORizosA.txt", "r") as InGSO:
      GSO = np.loadtxt(InGSO)
 
 
+
 #Define an instance of the class of models with a certain basis
 ABasisSet = BasisClass(Basis)
 
@@ -33,16 +34,14 @@ AModel = ModelClass(Basis,GSO)
 #Define an instance of a specific model with basis set and a random GSO matrix
 AModel = ModelClass(Basis,ABasisSet.random_gso())
 
-sys.exit()
 #Check model for tachyons
-AModel.tachyon_check()
+#AModel.tachyon_check()
 
 #Print the q-expansion of the partition function (to second order in q)
-print(AModel.partition_function(1)[0])
+#print(AModel.partition_function(1)[0])
 
 #Print the worldsheet vacuum energy (to second order in q)
-print(AModel.partition_function(1)[1])
-
+#print(AModel.partition_function(1)[1])
 
 #Define an instance of a sectro within a specific model with a basis set, GSO matrix and a sector
 ASector = SectorClass(Basis,GSO,[0,0,0,0,0,0,0,0,1])
