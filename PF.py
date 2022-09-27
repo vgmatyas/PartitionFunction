@@ -11,7 +11,6 @@ with open("Basis.txt", "r") as InBasis:
 with open("GSORizosA.txt", "r") as InGSO:
      GSO = np.loadtxt(InGSO)
 
-a
 
 #Define an instance of the class of models with a certain basis
 ABasisSet = BasisClass(Basis)
