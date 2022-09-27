@@ -1,4 +1,5 @@
 import numpy as np
+import sys
 from PFClasses import GlobalFunctions
 from PFClasses import BasisClass
 from PFClasses import ModelClass
@@ -14,13 +15,25 @@ with open("GSORizosA.txt", "r") as InGSO:
 #Define an instance of the class of models with a certain basis
 ABasisSet = BasisClass(Basis)
 
+#print(ABasisSet.comp_dim())
+
+#print(ABasisSet.sectors()[0])
+
+#print(ABasisSet.sector_mass())
+
+#print(ABasisSet.random_gso())
+
+
+
 #Define a specific model with basis set and GSO matrix
 AModel = ModelClass(Basis,GSO)
 
+#print(AModel.gso_check())
 
 #Define an instance of a specific model with basis set and a random GSO matrix
 AModel = ModelClass(Basis,ABasisSet.random_gso())
 
+sys.exit()
 #Check model for tachyons
 AModel.tachyon_check()
 

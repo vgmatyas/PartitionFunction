@@ -260,12 +260,12 @@ class ModelClass(BasisClass):
         n2 = 0
         for i in range(self.num_basis()):
             for k in range(self.num_basis()):
-                TGSO1 = -np.round(np.exp(1j*np.pi*GlobalFunctions.basis_prod(Basis[i],Basis[k],self.comp_dim())/4)*GSO[i][0])
-                TGSO2 = np.round(np.exp(1j*np.pi*GlobalFunctions.basis_prod(Basis[i],Basis[k],self.comp_dim())/2)*np.conj(GSO[k][i]))
-            if i == k and TGSO1 != GSO[i][k]:
+                TGSO1 = -np.round(np.exp(1j*np.pi*GlobalFunctions.basis_prod(self.basis[i],self.basis[k],self.comp_dim())/4)*self.gso[i][0])
+                TGSO2 = np.round(np.exp(1j*np.pi*GlobalFunctions.basis_prod(self.basis[i],self.basis[k],self.comp_dim())/2)*np.conj(self.gso[k][i]))
+            if i == k and TGSO1 != self.gso[i][k]:
                 n1 += 1
                 #print(k)
-            elif i != k and TGSO2 != GSO[i][k]:
+            elif i != k and TGSO2 != self.gso[i][k]:
                 n2 += 1
                 #print(i,k)
         if n1 != 0 or n2 != 0:
