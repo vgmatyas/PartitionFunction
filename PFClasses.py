@@ -51,6 +51,7 @@ class GlobalFunctions:
         return SecGSO
 
 
+
 class BasisClass:
 
     def __init__(self,basis):
@@ -432,7 +433,7 @@ class ModelClass(BasisClass):
                 if D[4][4]!=0:
                    Tach4.append([i,D[4][4]])
 
-            print("----- Tachyon Checker -----")
+            print("------- Tachyon Checker -------")
             print("Tachyons @ -1/2:")
             for i in range(len(Tach4)):
                 print(BSector[Tach4[i][0]]," ",Tach4[i][1])
@@ -551,7 +552,7 @@ class SectorClass(ModelClass):
                 SDelta[i] = 1
         return SDelta
 
-    def sector_partition_function(self,q_order):
+    def partition_function(self,q_order):
 
         TQ = QCRe[::,:32*(q_order+1)+1:] + 1j*QCIm[::,:32*(q_order+1)+1:]
         E =  QCEt[0,0:8*(q_order+1)+9]
@@ -630,4 +631,21 @@ class SectorClass(ModelClass):
               DOut[i][0] = i-(8+1)
               DOut[0][i] = i-(8+1)
 
-        return DOut
+        QIntegral = QInt[0:int(8*(q_order+1))+1,0:int(8*(q_order+1))+1]
+        m=0
+        for i in range(D.shape[0]):
+           for j in range(D.shape[0]):
+            if i!=j and QIntegral[i][j]==9 and D[i][j]!=0:
+                print("~ Error: Divergent Terms Partition Function!")
+                print(i+1,j+1,D[i][j])
+                #sys.exit()
+            if i==j and i<8 and j<8 and D[i][j] != 0:
+                m+=1
+                CoC = 999999
+        if m==0:
+           CoC = 0
+           for i in range(D.shape[0]):
+            for j in range(D.shape[0]):
+             CoC += D[i][j] * QIntegral[i][j]
+
+        return DOut, CoC
