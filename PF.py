@@ -6,47 +6,46 @@ from PFClasses import ModelClass
 from PFClasses import SectorClass
 
 #Import file with basis vectors and GSO phase matrix
-with open("Basis.txt", "r") as InBasis:
+with open("BasisE1.txt", "r") as InBasis:
      Basis = np.loadtxt(InBasis)
-with open("GSORizosA.txt", "r") as InGSO:
-     GSO = np.loadtxt(InGSO)
 
+"""
+with open("GSOGolden.txt", "r") as InGSO:
+     GSO = np.loadtxt(InGSO)
+"""
 
 #Define an instance of the class of models with a certain basis
 ABasisSet = BasisClass(Basis)
 
-#print(ABasisSet.comp_dim())
-
-#print(ABasisSet.sectors()[0])
-
-#print(ABasisSet.sector_mass())
-
-#print(ABasisSet.random_gso())
-
-
-
-#Define a specific model with basis set and GSO matrix
-AModel = ModelClass(Basis,GSO)
-
-#print(AModel.gso_check())
-
+A = 0
+SUSY = 0
 #Define an instance of a specific model with basis set and a random GSO matrix
-AModel = ModelClass(Basis,ABasisSet.random_gso())
+while (A != 0 or SUSY == 0):
+    AModel = ModelClass(Basis,ABasisSet.random_gso())
 
-#Check model for tachyons
-#AModel.tachyon_check()
+    [PF,CoC] = AModel.partition_function(1)
+
+    print(CoC)
+
+    A = PF[9,9]
+    SUSY = np.sum(PF[1::,1::])
+
+    with open("GSO.txt","w+") as Out:
+            np.savetxt(Out,AModel.gso, delimiter=' ',fmt="%d")
+
+    with open("Q.txt","w+") as Out:
+            np.savetxt(Out,PF, delimiter=' ',fmt="%d")
+
+sys.exit()
+c=0
+NonTachGSOs = []
+while c<10:
+    AModel = ModelClass(Basis,ABasisSet.random_gso())
+    if AModel.tachyon_check() == True:
+        NonTachGSOs.append(AModel.gso)
+        c+=1
+with open("NonTachGSOs.txt","w+") as Out:
+        np.savetxt(Out,np.concatenate(NonTachGSOs,axis=0), delimiter=' ',fmt="%d")
 
 #Print the q-expansion of the partition function (to second order in q)
-#print(AModel.partition_function(1)[0])
-
-#Print the worldsheet vacuum energy (to second order in q)
-#print(AModel.partition_function(1)[1])
-
-#Define an instance of a sectro within a specific model with a basis set, GSO matrix and a sector
-ASector = SectorClass(Basis,GSO,[0,0,0,0,0,0,0,0,1])
-
-#Print partition function contribution of the given sector
-print(ASector.partition_function(1)[0])
-
-#Print vacuum energy contribution of the given sector
-print(ASector.partition_function(1)[1])
+print(AModel.partition_function(0)[0])
