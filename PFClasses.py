@@ -52,6 +52,7 @@ class GlobalFunctions:
 
 
 
+
 class BasisClass:
 
     def __init__(self,basis):
@@ -274,6 +275,14 @@ class ModelClass(BasisClass):
         else:
             #print("~ Basis GSOs OK!")
             return True
+
+    def basis_prod_matrix(self):
+        BP = np.zeros((self.num_basis(),self.num_basis()))
+        for i in range(self.num_basis()):
+            for k in range(self.num_basis()):
+                BP[i,k] = GlobalFunctions.basis_prod(self.basis[i],self.basis[k],self.comp_dim())
+        return BP
+
 
 
     def partition_function(self,q_order):
@@ -649,3 +658,114 @@ class SectorClass(ModelClass):
              CoC += D[i][j] * QIntegral[i][j]
 
         return DOut, CoC
+
+
+class IndexBasisClass:
+
+    def __init__(self,basis,s_matrix):
+        IndexBasisClass.basis = basis
+        IndexBasisClass.index_basis = np.matmul(s_matrix,basis)%2
+        IndexBasisClass.s_matrix = s_matrix
+
+    def num_basis(self):
+        return self.basis.shape[0]
+
+    def comp_dim(self):
+        return int((self.basis.shape[1]-24)/4)
+
+    def num_sector(self):
+        return 2**self.num_basis()
+
+    def sectors(self):
+        NumBas = self.num_basis()
+        NumSec =self.num_sector()
+        Sector = np.zeros((NumSec,self.basis.shape[1]))
+        BSector = np.zeros((NumSec,NumBas))
+        rngs = np.full(self.basis.shape[0],2)
+        for i,t in enumerate(itertools.product(*[range(i) for i in rngs])):
+            Sector[i,:] = sum([self.index_basis[i,:] * t[i] for i in range(len(t))])
+            BSector[i,:] = t
+        return Sector%2, BSector.astype(int)
+
+
+    def theta_matrix(self):
+        Sector = self.sectors()[0]
+        CompDim = self.comp_dim()
+        SectorL=Sector[::,:8+CompDim*2:]
+        SectorRR=Sector[::,8+CompDim*2:8+CompDim*4:]
+        SectorRC=Sector[::,8+CompDim*4:8+CompDim*4+16:]
+        CSectorL = 1 - SectorL
+        CSectorRR = 1 - SectorRR
+        CSectorRC = 1 - SectorRC
+        MT1 = np.dot(SectorL, SectorL.T)/2
+        MT4 = np.dot(CSectorL, SectorL.T)/2
+        MT2 = np.dot(SectorL, CSectorL.T)/2
+        MT3 = np.dot(CSectorL, CSectorL.T)/2
+        MTb1 = np.dot(SectorRR, SectorRR.T)/2 + np.dot(SectorRC, SectorRC.T)
+        MTb2 = np.dot(SectorRR, CSectorRR.T)/2 + np.dot(SectorRC, CSectorRC.T)
+        MTb3 = np.dot(CSectorRR, CSectorRR.T)/2 + np.dot(CSectorRC, CSectorRC.T)
+        MTb4 = np.dot(CSectorRR, SectorRR.T)/2 + np.dot(CSectorRC, SectorRC.T)
+        return MT1,MT2,MT3,MT4,MTb1,MTb2,MTb3,MTb4
+
+
+class IndexModelClass(IndexBasisClass):
+
+    def __init__(self,basis,s_matrix,p_matrix,gso):
+        super().__init__(basis,s_matrix)
+        self.gso = gso
+        self.p_matrix = p_matrix
+        temp_g_matrix = np.zeros((self.gso.shape[0],self.gso.shape[0]))
+        for i in range(self.gso.shape[0]):
+            for j in range(self.gso.shape[0]):
+                if self.gso[i][j] == -1:
+                    temp_g_matrix[i,j] = 1
+                if self.gso[i][j] == +1:
+                    temp_g_matrix[i,j] = 0
+        self.g_matrix = temp_g_matrix
+
+    def partition_function(self,q_order):
+
+        TQ = QCRe[::,:32*(q_order+1)+1:]
+        E =  QCEt[0,0:8*(q_order+1)+9]
+        Eb = QCEt[1,0:8*(q_order+1)+9]
+
+        GPTilde = np.matmul(np.matmul(np.linalg.inv(self.s_matrix),(self.g_matrix + self.p_matrix)),np.linalg.inv(self.s_matrix.T))%2
+
+        CompDim = self.comp_dim()
+
+        NumSec = self.num_sector()
+
+        [Sector,BSector] = self.sectors()
+
+        [MT1,MT2,MT3,MT4,MTb1,MTb2,MTb3,MTb4] = self.theta_matrix()
+
+        TPF = np.zeros((32*(q_order+1)+1,32*(q_order+1)+1))
+        for i in range(Sector.shape[0]):
+           for j in range(Sector.shape[0]):
+              if MT1[i][j]==0 and MTb1[i][j]==0:
+                Chi = (BSector[i,0]+BSector[i,1])*(BSector[j,9]+BSector[j,10]+BSector[j,9]*BSector[j,10]) + (BSector[j,0]+BSector[j,1])*(BSector[i,9]*BSector[j,10]+BSector[i,10]*BSector[j,9])
+                Phase =(BSector[i,0]+BSector[j,0]+(np.matmul(np.matmul(BSector[i],GPTilde),BSector[j])) + Chi)%2
+                TPFT1 = GlobalFunctions.PolyMul(np.array([TQ[int(MT2[i][j]),::],TQ[25+int(MT3[i][j]),::],TQ[50+int(MT4[i][j]),::]]))
+                TPFT2 = GlobalFunctions.PolyMul(np.array([TQ[375+int(MTb2[i][j]),::],TQ[400+int(MTb3[i][j]),::],TQ[425+int(MTb4[i][j]),::]]))
+                TPFT = (-1)**(Phase) * np.tensordot(TPFT1,TPFT2,axes=0)
+                TPF += TPFT
+        QPF = np.around(np.real(TPF)/NumSec).astype(int)
+        for i in range(QPF.shape[0]):
+            for j in range(QPF.shape[1]):
+                if (i%4 != 0 or j%4 != 0) and QPF[i][j] != 0:
+                  print("Error: Disallowed Terms in q-Expansion! ",(i-32),(j-32),QPF[i][j])
+        QPF = QPF[0::4,0::4]
+        A = np.pad(QPF,((8,0),(8,0)), mode='constant')
+        B = np.tensordot(E,Eb,axes=0)
+        C = np.tensordot(A,B,axes=0)
+        D = np.zeros((C.shape[0],C.shape[0],2*C.shape[0]-1,2*C.shape[0]-1),dtype=int)
+        for k in range(D.shape[0]):
+         for l in range(D.shape[1]):
+           D[k,l,k:k+D.shape[0],l:l+D.shape[1]] = C[k,l,:,:]
+        D = D.sum(axis=0).sum(axis=0)[8:int(8*(q_order+1))+8+1,8:int(8*(q_order+1))+8+1]
+        DOut = np.pad(D,((1,0),(1,0)), mode='constant')
+        DOut[0][0] = 8
+        for i in range(1,DOut.shape[0]):
+          DOut[i][0] = i-(8+1)
+          DOut[0][i] = i-(8+1)
+        return DOut
